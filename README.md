@@ -1,0 +1,1 @@
+# Point-rp.ru.amx-doc
