@@ -172,7 +172,7 @@ public OnPlayerConnect(playerid)
 }
 ```
 
-Проблема: колбэк один на весь мод, модули дерутся за него через ALS-хуки.
+Проблема: колбэк один на весь мод, модули дерутся за него через систему cback.
 
 ### Здесь
 
@@ -193,7 +193,7 @@ CALLBACK MyModule.OnPlayerConnect (playerid)
 
 ### Возвращаемые значения
 
-В большинстве колбэков — просто `return;` без значения.
+В большинстве колбэков — не требуется возвращать `return;`, в условиях ставится просто `return;` без значения.
 
 В части колбэков нужно вернуть `BREAK` или `CONTINUE`:
 
@@ -211,12 +211,6 @@ OnPickupUp, OnPickupUpDynamic
 OnClickTD, OnClickPlayerTD
 OnEditDynamicObject
 ```
-
-В остальных — голый `return;`, в конце функции ничего.
-
-Не путать с колбэками, имя которых передаётся строкой в чужой API
-(например `#this.OnKeyArea` в `KeyArea.Create` или `#this.OnKeyMGameFinish`
-в `KeyMGame.Start`) — это обычные функции модуля, там `return;` без значения.
 
 ### Передача адреса колбэка в чужой API
 
@@ -300,8 +294,8 @@ OnCefInitialize (playerid, success)
 OnMutePlayer (playerid, bool:muted)
 ```
 
-Обратите внимание: смерть разделена на два колбэка. `OnPlayerKilled` даёт убийцу,
-`OnPlayerDeath` — только жертву.
+Обратите внимание: система убийства/смертей разделена на два колбэка. `OnPlayerKilled` даёт полную информацию о килле, так например убийцу, жертву и причину смерти (or weaponid),
+`OnPlayerDeath` — только playerid жертвы.
 
 ---
 
@@ -348,14 +342,14 @@ private MyModule.Init ()
 }
 ```
 
-Таймеры регистрируются через `#this.ИмяКолбэка` — макрос `#` превращает это в строку
+Таймеры и прочие функции требующие в качестве аргумента const callback[] регистрируются через `#this.ИмяКолбэка` — макрос `#` превращает это в строку
 с уже развёрнутым префиксом.
 
 ---
 
 ## 5. Команды
 
-`OnPlayerCommandText` не используется. Команды приходят в `OnPlayerCmd` уже разобранными
+Команды в cback приходят в `OnPlayerCmd` уже разобранными
 на имя и аргументы.
 
 ```pawn
@@ -435,12 +429,6 @@ CALLBACK MyModule.OnDialogResponse (playerid, dialogid, response, listitem, cons
 Callback.Add(@OnDialogResponse, #this.OnDialogResponse);
 ```
 
-### Подводный камень TABLIST
-
-В `DIALOG_STYLE_TABLIST` **первая строка считается заголовком** и не кликается,
-а `listitem` отсчитывается от строк под ней. Если нужны все строки кликабельными —
-использовать `DIALOG_STYLE_TABLIST_HEADERS` и явно добавить строку-шапку.
-
 ---
 
 ## 7. База данных
@@ -500,7 +488,7 @@ db_free_result(result);
 
 Привязка к игроку — по `PlayerInfo[playerid][pUUID]`.
 
-Загрузка данных вешается на `OnPlayerLogin`, сохранение — на `OnPlayerDisconnect`.
+Загрузка данных вешается на `OnPlayerLogin`, сохранение — на `OnPlayerDisconnect` с обязательной проверкой на IsPlayerLogin.
 
 ---
 
@@ -508,13 +496,13 @@ db_free_result(result);
 
 ### Проверки-возвраты блоками
 
-Не так:
+Такое применимо к коллбекам и функциям в которых возвращается какое либо значение:
 ```pawn
 if (!condition)
     return SendClientMessage(playerid, COLOR_GREY, " Ошибка");
 ```
 
-А так:
+Так делать, когда коллбек/функция не должна ничего возвращать:
 ```pawn
 if (!condition)
 {
@@ -523,11 +511,9 @@ if (!condition)
 }
 ```
 
-Исключение — команды в `OnPlayerCmd`, там первый вариант допустим.
-
 ### Комментарии
 
-В боевом коде минимальны. Допустимы короткие пометки строчными буквами:
+В боевом коде минимальны, документацию к каждой функции расписывать не нужно. Допустимы короткие пометки строчными буквами:
 
 ```pawn
 // дёргается из производства когда игрок что то крафтит
@@ -539,7 +525,7 @@ if (!condition)
 ### Именование
 
 Функции с заглавной: `GetPlayerData`, `SpawnActor`.
-Приватные переменные — как удобно, часто camelCase: `alexSpot`, `blockTime`.
+Приватные переменные — camelCase: `alexSpot`, `blockTime`.
 Константы модуля с префиксом: `FESC_ORDER_TIME`, `AT_LVL_WHO`.
 
 ### Тестовый режим
@@ -591,8 +577,6 @@ if ((flags & MASK) != MASK)    // верно
 ```pawn
 format(buf, size, "%s|", buf);   // буфер одновременно приёмник и источник
 ```
-Поведение не гарантировано, на длинных данных режется. Собирать через `strcat`
-во временный буфер.
 
 ### Индекс, сбрасывающийся во вложенном цикле
 
@@ -611,7 +595,7 @@ format(buf, size, "%s|", buf);   // буфер одновременно приё
  * Module: MyModule
  * Author: YourNick
  *
- * Point Role Play (c) Point-rp.ru 2026
+ * Point Role Play (c) Point-rp.ru год написания модуля (например * Point Role Play (c) Point-rp.ru 2026)
  */
 
 #if defined MyModule
